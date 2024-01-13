@@ -1,0 +1,9 @@
+name: scoro
+version: 0.1.0
+
+authors:
+  - konovod <konovod@gmail.com>
+
+crystal: 1.9.2
+
+license: MIT
