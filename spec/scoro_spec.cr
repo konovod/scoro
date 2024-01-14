@@ -134,6 +134,21 @@ describe "scoro" do
     end
     DEBUG_LIST.should eq [1, 2, 3, 4]
   end
+
+  it "support times without counter" do
+    fib = scoro do
+      @i : Int32 = 0
+      5.times do
+        DEBUG_LIST << 1
+        yield
+      end
+    end
+    DEBUG_LIST.clear
+    while !fib.complete
+      fib.run
+    end
+    DEBUG_LIST.should eq [1, 1, 1, 1, 1]
+  end
 end
 
 implement_scoro

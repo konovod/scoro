@@ -16,7 +16,7 @@
 
 private IMPL_BLOCKS = {} of MacroId => ASTNode
 
-private SCORO_DEBUG = false
+private SCORO_DEBUG = true
 
 abstract class SerializableCoroutine
   property state = 0
@@ -205,7 +205,7 @@ macro implement_scoro
                      cur_loop_stack << {cur_state, add_vars_count}
                      gen_list << [:assign, "@_i#{add_vars_count}".id, 0]
                      gen_list << [:while, cur_state, "@_i#{add_vars_count} < #{expr.receiver}".id]
-                     gen_list << [:assign, expr.block.args[0], "@_i#{add_vars_count}".id]
+                     gen_list << [:assign, expr.block.args[0], "@_i#{add_vars_count}".id] unless expr.block.args.empty?
                      queue = [expr.block.body, {expr, cur_state, add_vars_count}] + queue
                    elsif expr.name == "loop"
                      cur_loop_stack << {cur_state, nil}
