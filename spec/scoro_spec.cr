@@ -65,7 +65,7 @@ scoro FiberEach do
 end
 
 describe "scoro" do
-  it "runs simple example" do
+  it "process each" do
     fib = FiberEach.new
     DEBUG_LIST.clear
     # fib.raw_run { Fiber.yield }
@@ -75,3 +75,24 @@ describe "scoro" do
     DEBUG_LIST.should eq [1, 10, 100]
   end
 end
+
+describe "scoro" do
+  it "support inline syntax" do
+    fib = scoro do
+      @i : Int32 = 0
+      loop do
+        DEBUG_LIST << @i
+        @i += 1
+        yield
+      end
+    end
+    DEBUG_LIST.clear
+    # fib.raw_run { Fiber.yield }
+    fib.run
+    fib.run
+    fib.run
+    DEBUG_LIST.should eq [0, 1, 2]
+  end
+end
+
+implement_scoro

@@ -4,11 +4,30 @@
 # +While [(start, end), inc at start and end]
 # +Yield [(after), inc at after]
 # +TypeDeclaration
-# Call: each, +times, +loop, sleep [rewrite to while] [others - fail]
+# Call: +each, +times, +loop, sleep [rewrite to while] [others - fail]
 # -Break [just adds @state= and return]
 # -Next [just adds @state= and return]
 
+IMPL_BLOCKS = {} of MacroId => ASTNode
+
+SCORO_DEBUG = true
+
+macro scoro(&block)
+  {%
+    name = "ScoroTempClass#{IMPL_BLOCKS.size}".id
+    IMPL_BLOCKS[name] = block
+  %}
+  {{name}}.new
+end
+
 macro scoro(class_name, &block)
+  {%
+    IMPL_BLOCKS[class_name] = block
+  %}
+end
+
+macro implement_scoro
+  {% for class_name, block in IMPL_BLOCKS %}
   class {{class_name}}
     property state = 0
     getter complete = false
@@ -152,7 +171,6 @@ macro scoro(class_name, &block)
                    cur_state += 2
                  elsif expr.is_a? Call
                    cur_state += 1
-                   puts("#{cur_state} #{expr.name} do") # TODO
                    if expr.name == "times"
                      add_vars_count += 1
                      gen_list << [:assign, "@_i#{add_vars_count}".id, 0]
@@ -161,6 +179,7 @@ macro scoro(class_name, &block)
                      queue = [expr.block.body, {expr, cur_state, add_vars_count}] + queue
                    elsif expr.name == "loop"
                      gen_list << [:while, cur_state, true]
+                     queue = [expr.block.body, {expr, cur_state}] + queue
                    elsif expr.name == "each"
                      add_vars_count += 1
                      gen_list << [:assign, "@_i#{add_vars_count}".id, 0]
@@ -249,5 +268,11 @@ macro scoro(class_name, &block)
       end
     end
   end
-{% debug %}
+{% end %}
+{%
+  IMPL_BLOCKS.clear
+  if SCORO_DEBUG
+    debug
+  end
+%}
 end
