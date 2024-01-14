@@ -4,9 +4,9 @@
 # +While [(start, end), inc at start and end]
 # +Yield [(after), inc at after]
 # +TypeDeclaration
-# Call: +each, +times, +loop, sleep [rewrite to while] [others - fail]
-# -Break [just adds @state= and return]
-# -Next [just adds @state= and return]
+# Call: +each, +times, +loop, -sleep [rewrite to while] [others - fail]
+# +Break [just adds @state= and next iteration]
+# +Next [adds @state=, inc if needed and next iteration]
 # +Return [adds @complete= and return]
 # -ExceptionHandler [possible, but not planned]
 
@@ -134,6 +134,7 @@ macro implement_scoro
 
              gen_list = [] of Tuple(Symbol | ASTNode, Int32)
              add_vars_count = 0
+             cur_loop_stack = [] of Tuple(Int32, Int32?)
 
              forever.each do
                forever << nil
@@ -151,8 +152,10 @@ macro implement_scoro
                    # end of some expression
                    first, second, third = expr
                    if first.is_a? While
+                     cur_loop_stack = cur_loop_stack[0...-1]
                      gen_list << [:transition, second, second + 2]
                    elsif first.is_a? Call
+                     cur_loop_stack = cur_loop_stack[0...-1]
                      if first.name == "times"
                        gen_list << [:end_times, second, third]
                      elsif first.name == "each"
@@ -177,10 +180,21 @@ macro implement_scoro
                    gen_list << [:assign, expr.var, expr.value]
                  elsif expr.is_a? Return
                    gen_list << [:return, cur_state]
+                 elsif expr.is_a? Break
+                   last_loop = cur_loop_stack.last
+                   gen_list << [:next, last_loop[0] + 2]
+                 elsif expr.is_a? Next
+                   last_loop = cur_loop_stack.last
+                   if last_loop[1].is_a? NumberLiteral
+                     gen_list << [:next_inc, cur_loop_stack.last[0], cur_loop_stack.last[1]]
+                   else
+                     gen_list << [:next, cur_loop_stack.last[0]]
+                   end
                  elsif !dirty[{expr, expr.line_number, expr.column_number}]
                    gen_list << [expr, nil]
                  elsif expr.is_a? While
                    cur_state += 1
+                   cur_loop_stack << {cur_state, nil}
                    gen_list << [:while, cur_state, expr.cond]
                    queue = [expr.body, {expr, cur_state}] + queue
                    cur_state += 2
@@ -188,15 +202,18 @@ macro implement_scoro
                    cur_state += 1
                    if expr.name == "times"
                      add_vars_count += 1
+                     cur_loop_stack << {cur_state, add_vars_count}
                      gen_list << [:assign, "@_i#{add_vars_count}".id, 0]
                      gen_list << [:while, cur_state, "@_i#{add_vars_count} < #{expr.receiver}".id]
                      gen_list << [:assign, expr.block.args[0], "@_i#{add_vars_count}".id]
                      queue = [expr.block.body, {expr, cur_state, add_vars_count}] + queue
                    elsif expr.name == "loop"
+                     cur_loop_stack << {cur_state, nil}
                      gen_list << [:while, cur_state, true]
                      queue = [expr.block.body, {expr, cur_state}] + queue
                    elsif expr.name == "each"
                      add_vars_count += 1
+                     cur_loop_stack << {cur_state, add_vars_count}
                      gen_list << [:assign, "@_i#{add_vars_count}".id, 0]
                      gen_list << [:while, cur_state, "@_i#{add_vars_count} < #{expr.receiver}.size".id]
                      gen_list << [:assign, expr.block.args[0], "#{expr.receiver}[@_i#{add_vars_count}]".id]
@@ -262,6 +279,13 @@ macro implement_scoro
     {% elsif expr[0] == :return %}
           @complete = true
           return
+    {% elsif expr[0] == :next %}
+          @state = {{expr[1]}}
+          next
+    {% elsif expr[0] == :next_inc %}
+          @_i{{expr[2]}} += 1
+          @state = {{expr[1]}}
+          next
     {% else %}
           {{expr[0]}}
     {% end %}

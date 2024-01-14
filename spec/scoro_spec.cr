@@ -111,11 +111,28 @@ describe "scoro" do
     DEBUG_LIST.clear
     while !fib.complete
       fib.run
-      if fib.i > 4
-        raise "#{fib} not stopped"
-      end
     end
     DEBUG_LIST.should eq [0, 1, 2, 3]
+  end
+
+  it "support break and next" do
+    fib = scoro do
+      @i : Int32 = 0
+      loop do
+        @i += 1
+        5.times do |i|
+          next unless i == @i
+          DEBUG_LIST << @i
+        end
+        break if @i >= 10
+        yield
+      end
+    end
+    DEBUG_LIST.clear
+    while !fib.complete
+      fib.run
+    end
+    DEBUG_LIST.should eq [1, 2, 3, 4]
   end
 end
 
