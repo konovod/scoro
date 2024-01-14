@@ -8,9 +8,17 @@
 # -Break [just adds @state= and return]
 # -Next [just adds @state= and return]
 
-IMPL_BLOCKS = {} of MacroId => ASTNode
+private IMPL_BLOCKS = {} of MacroId => ASTNode
 
-SCORO_DEBUG = true
+private SCORO_DEBUG = false
+
+abstract class SerializableCoroutine
+  property state = 0
+  property complete = false
+
+  abstract def raw_run(&)
+  abstract def run
+end
 
 macro scoro(&block)
   {%
@@ -28,9 +36,7 @@ end
 
 macro implement_scoro
   {% for class_name, block in IMPL_BLOCKS %}
-  class {{class_name}}
-    property state = 0
-    getter complete = false
+  class {{class_name}} < SerializableCoroutine
     {% if block.body.is_a? Expressions %}
     {% for expr in block.body.expressions %}
       {% if expr.is_a? TypeDeclaration %}
