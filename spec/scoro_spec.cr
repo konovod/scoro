@@ -35,9 +35,7 @@ scoro Fiber1 do
 end
 
 describe "scoro" do
-  # TODO: Write tests
-
-  it "runs simple exaplme" do
+  it "runs simple example" do
     fib = Fiber1.new
     # fib.raw_run { Fiber.yield }
     fib.run
@@ -56,5 +54,24 @@ describe "scoro" do
       fib2.run
     end
     DEBUG_LIST.should eq [1, 2, 3, 400, 500, 600, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+  end
+end
+
+scoro FiberEach do
+  [1, 10, 100].each do |x|
+    DEBUG_LIST << x
+    yield
+  end
+end
+
+describe "scoro" do
+  it "runs simple example" do
+    fib = FiberEach.new
+    DEBUG_LIST.clear
+    # fib.raw_run { Fiber.yield }
+    fib.run
+    fib.run
+    fib.run
+    DEBUG_LIST.should eq [1, 10, 100]
   end
 end

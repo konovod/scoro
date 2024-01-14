@@ -12,6 +12,7 @@ macro scoro(class_name, &block)
   class {{class_name}}
     property state = 0
     getter complete = false
+    {% if block.body.is_a? Expressions %}
     {% for expr in block.body.expressions %}
       {% if expr.is_a? TypeDeclaration %}
         {{expr.var}} = uninitialized {{expr.type}}
@@ -26,14 +27,19 @@ macro scoro(class_name, &block)
 
       {% end %}
     {% end %}
+    {% end %}
 
     def raw_run(&)
+      {% if block.body.is_a? Expressions %}
       {% for expr in block.body.expressions %}
       {% if expr.is_a? TypeDeclaration %}
         {{expr.var}} = {{expr.value}}
       {% else %}  
         {{expr}}
       {% end %}
+      {% end %}
+      {% else %}
+        {{yield}}
       {% end %}
     end
 
@@ -118,7 +124,7 @@ macro scoro(class_name, &block)
                      if first.name == "times"
                        gen_list << [:end_times, second, third]
                      elsif first.name == "each"
-                       gen_list << [:end_each, second, third]
+                       gen_list << [:end_times, second, third]
                      elsif first.name == "loop"
                        gen_list << [:end_while, second]
                      end
@@ -149,14 +155,18 @@ macro scoro(class_name, &block)
                    puts("#{cur_state} #{expr.name} do") # TODO
                    if expr.name == "times"
                      add_vars_count += 1
-                     gen_list << [:assign, "@i#{add_vars_count}".id, 0]
-                     gen_list << [:while, cur_state, "@i#{add_vars_count} < #{expr.receiver}".id]
-                     gen_list << [:assign, expr.block.args[0], "@i#{add_vars_count}".id]
+                     gen_list << [:assign, "@_i#{add_vars_count}".id, 0]
+                     gen_list << [:while, cur_state, "@_i#{add_vars_count} < #{expr.receiver}".id]
+                     gen_list << [:assign, expr.block.args[0], "@_i#{add_vars_count}".id]
                      queue = [expr.block.body, {expr, cur_state, add_vars_count}] + queue
                    elsif expr.name == "loop"
                      gen_list << [:while, cur_state, true]
                    elsif expr.name == "each"
-                     # TODO
+                     add_vars_count += 1
+                     gen_list << [:assign, "@_i#{add_vars_count}".id, 0]
+                     gen_list << [:while, cur_state, "@_i#{add_vars_count} < #{expr.receiver}.size".id]
+                     gen_list << [:assign, expr.block.args[0], "#{expr.receiver}[@_i#{add_vars_count}]".id]
+                     queue = [expr.block.body, {expr, cur_state, add_vars_count}] + queue
                    end
                    cur_state += 2
                  elsif expr.is_a? If
@@ -175,7 +185,7 @@ macro scoro(class_name, &block)
              end %}
 
            {% for i in 1..add_vars_count %}
-             property i{{i}} = 0
+             property _i{{i}} = 0
            {% end %}
        
 
@@ -208,7 +218,7 @@ macro scoro(class_name, &block)
         when {{expr[1] + 2}}
 
           {% elsif expr[0] == :end_times %}
-          @i{{expr[2]}} += 1
+          @_i{{expr[2]}} += 1
           @state = {{expr[1]}}
         when {{expr[1] + 2}}
 
