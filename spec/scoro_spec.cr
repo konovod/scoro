@@ -89,8 +89,10 @@ describe "scoro" do
     DEBUG_LIST.clear
     # fib.raw_run { Fiber.yield }
     fib.run
-    fib.run
-    fib.run
+
+    fib2 = fib.dup
+    fib2.run
+    fib2.run
     DEBUG_LIST.should eq [0, 1, 2]
   end
 end

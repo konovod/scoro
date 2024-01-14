@@ -7,6 +7,8 @@
 # Call: +each, +times, +loop, sleep [rewrite to while] [others - fail]
 # -Break [just adds @state= and return]
 # -Next [just adds @state= and return]
+# -Return [adds @complete= and return]
+# -ExceptionHandler [not planned]
 
 private IMPL_BLOCKS = {} of MacroId => ASTNode
 
@@ -114,6 +116,7 @@ macro implement_scoro
                    end
                    parents_stack = parents_stack[0...-1]
                  else
+                   # puts(expr.class_name)
                    # skip all other nodes
                  end
                end
@@ -220,15 +223,14 @@ macro implement_scoro
         case @state
         when 0
 
-        {% for expr in gen_list %}
-          {% if expr[0] == :assign %}
+  {% for expr in gen_list %}
+    {% if expr[0] == :assign %}
             {{expr[1]}} = {{expr[2]}}
-          {% elsif expr[0] == :yield %}
+    {% elsif expr[0] == :yield %}
             @state = {{expr[1]}}
             return
         when {{expr[1]}}
-
-          {% elsif expr[0] == :while %}
+    {% elsif expr[0] == :while %}
             @state = {{expr[1]}}
         when {{expr[1]}}
             if {{expr[2]}}
@@ -237,40 +239,37 @@ macro implement_scoro
               @state = {{expr[1] + 2}}
             end  
         when {{expr[1] + 1}}
-
-          {% elsif expr[0] == :end_while %}
+    {% elsif expr[0] == :end_while %}
           @state = {{expr[1]}}
         when {{expr[1] + 2}}
-
-          {% elsif expr[0] == :end_times %}
+    {% elsif expr[0] == :end_times %}
           @_i{{expr[2]}} += 1
           @state = {{expr[1]}}
         when {{expr[1] + 2}}
-
-          {% elsif expr[0] == :if %}
-            if {{expr[2]}}
-              @state = {{expr[1]}}
-            else
-              @state = {{expr[1] + 1}}
-            end  
+    {% elsif expr[0] == :if %}
+          if {{expr[2]}}
+            @state = {{expr[1]}}
+          else
+            @state = {{expr[1] + 1}}
+          end  
         when {{expr[1]}}
-          {% elsif expr[0] == :else %}
-              @state = {{expr[1] + 2}}
+    {% elsif expr[0] == :else %}
+          @state = {{expr[1] + 2}}
         when {{expr[1] + 1}}
-          {% elsif expr[0] == :end_if %}
-              @state = {{expr[1] + 2}}
+    {% elsif expr[0] == :end_if %}
+          @state = {{expr[1] + 2}}
         when {{expr[1] + 2}}
-
-
-
-          {% else %}
-            {{expr[0]}}
-          {% end %}
-      {% end %}
-            @state += 1
-            @complete = true
-            return # fiber complete
+    {% else %}
+          {{expr[0]}}
+    {% end %}
+  {% end %}
+          @state += 1
+          @complete = true
+          return # fiber complete
         end
+      end
+      if false #to perform syntax check of initial code
+        raw_run{}
       end
     end
   end
