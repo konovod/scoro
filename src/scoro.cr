@@ -7,8 +7,12 @@
 # Call: +each, +times, +loop, sleep [rewrite to while] [others - fail]
 # -Break [just adds @state= and return]
 # -Next [just adds @state= and return]
-# -Return [adds @complete= and return]
-# -ExceptionHandler [not planned]
+# +Return [adds @complete= and return]
+# -ExceptionHandler [possible, but not planned]
+
+# Future optimizations:
+# - merge loop start with loop control state
+# - don't mark all ControlExpressions as dirty (separate pass?)
 
 private IMPL_BLOCKS = {} of MacroId => ASTNode
 
@@ -100,7 +104,7 @@ macro implement_scoro
                  elsif expr.is_a? Case
                    parents_stack << expr
                    queue = [expr.whens.map(&.body), expr.else, 1] + queue
-                 elsif expr.is_a? Yield
+                 elsif expr.is_a?(Yield) || expr.is_a?(ControlExpression)
                    # found yield, mark all parents as dirty
                    parents_stack.each do |marked|
                      dirty[{marked, marked.line_number, marked.column_number}] = true
@@ -171,6 +175,8 @@ macro implement_scoro
                    gen_list << [:yield, cur_state]
                  elsif expr.is_a? TypeDeclaration
                    gen_list << [:assign, expr.var, expr.value]
+                 elsif expr.is_a? Return
+                   gen_list << [:return, cur_state]
                  elsif !dirty[{expr, expr.line_number, expr.column_number}]
                    gen_list << [expr, nil]
                  elsif expr.is_a? While
@@ -259,6 +265,9 @@ macro implement_scoro
     {% elsif expr[0] == :end_if %}
           @state = {{expr[1] + 2}}
         when {{expr[1] + 2}}
+    {% elsif expr[0] == :return %}
+          @complete = true
+          return
     {% else %}
           {{expr[0]}}
     {% end %}

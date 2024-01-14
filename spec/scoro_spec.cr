@@ -87,13 +87,35 @@ describe "scoro" do
       end
     end
     DEBUG_LIST.clear
-    # fib.raw_run { Fiber.yield }
+    fib.raw_run { Fiber.yield; break if DEBUG_LIST.size >= 3 }
+    DEBUG_LIST.should eq [0, 1, 2]
+    DEBUG_LIST.clear
     fib.run
 
     fib2 = fib.dup
     fib2.run
     fib2.run
     DEBUG_LIST.should eq [0, 1, 2]
+  end
+
+  it "support return statement" do
+    fib = scoro do
+      @i : Int32 = 0
+      loop do
+        DEBUG_LIST << @i
+        @i += 1
+        yield
+        return if @i >= 4
+      end
+    end
+    DEBUG_LIST.clear
+    while !fib.complete
+      fib.run
+      if fib.i > 4
+        raise "#{fib} not stopped"
+      end
+    end
+    DEBUG_LIST.should eq [0, 1, 2, 3]
   end
 end
 
