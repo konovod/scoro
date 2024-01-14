@@ -151,20 +151,20 @@ macro implement_scoro
                    # end of some expression
                    first, second, third = expr
                    if first.is_a? While
-                     gen_list << [:end_while, second]
+                     gen_list << [:transition, second, second + 2]
                    elsif first.is_a? Call
                      if first.name == "times"
                        gen_list << [:end_times, second, third]
                      elsif first.name == "each"
                        gen_list << [:end_times, second, third]
                      elsif first.name == "loop"
-                       gen_list << [:end_while, second]
+                       gen_list << [:transition, second, second + 2]
                      end
                    elsif first.is_a? If
                      if third == 0
-                       gen_list << [:else, second]
+                       gen_list << [:transition, second + 2, second + 1]
                      else
-                       gen_list << [:end_if, second]
+                       gen_list << [:transition, second + 2, second + 2]
                      end
                    else
                      raise "BUG: unsupported node: #{expr}"
@@ -245,9 +245,9 @@ macro implement_scoro
               @state = {{expr[1] + 2}}
             end  
         when {{expr[1] + 1}}
-    {% elsif expr[0] == :end_while %}
+    {% elsif expr[0] == :transition %}
           @state = {{expr[1]}}
-        when {{expr[1] + 2}}
+        when {{expr[2]}}
     {% elsif expr[0] == :end_times %}
           @_i{{expr[2]}} += 1
           @state = {{expr[1]}}
@@ -259,12 +259,6 @@ macro implement_scoro
             @state = {{expr[1] + 1}}
           end  
         when {{expr[1]}}
-    {% elsif expr[0] == :else %}
-          @state = {{expr[1] + 2}}
-        when {{expr[1] + 1}}
-    {% elsif expr[0] == :end_if %}
-          @state = {{expr[1] + 2}}
-        when {{expr[1] + 2}}
     {% elsif expr[0] == :return %}
           @complete = true
           return
