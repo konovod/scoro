@@ -2,11 +2,13 @@
 
 Serializable COROutines in a Crystal (white-box state machine approach)
 
-Works by unrolling language constructions to one state machine
+Works by recursively unrolling AST tree to one state machine
 
 It will be impossible without 
-  Idea: https://gamedev.ru/flame/forum/?id=238878&page=35&m=5849512#m510
-  Way to make `while` loop inside a macro: https://github.com/crystal-lang/crystal/pull/10959#issuecomment-882036815
+
+  - Idea: https://gamedev.ru/flame/forum/?id=238878&page=35&m=5849512#m510
+
+  - Way to make `while` loop inside a macro: https://github.com/crystal-lang/crystal/pull/10959#issuecomment-882036815
 
 ## Installation
 
@@ -227,7 +229,8 @@ implement_scoro
  - `each` caller is evaluated on every iteration, so `[1,2,3].each` inside scoro isn't a good idea (will allocate new array every time scoro is resumed).
  - `each` only work with `Indexable`, not `Enumerable`, because state of `Indexable` iteration can be easily serialized - it's just index
  - for now, all control constructs (`next`\`break`\`return`) unrolls involved loops to state machine even if there is no `yield` inside loop. 
- 
+ - currently, `x = if...`, `x = case...` are not supported
+
 ## Development
 
  - [x] BUG: update all variables for inner loops
@@ -238,6 +241,7 @@ implement_scoro
  - [ ] FEATURE: sleep
  - [ ] FEATURE: channel.send\receive?
  - [ ] FEATURE: each_with_index
+ - [ ] FEATURE: if, case with assignment
 
 
 
