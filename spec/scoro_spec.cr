@@ -1,6 +1,7 @@
 require "./spec_helper"
 
-DEBUG_LIST = [] of Int32
+DEBUG_LIST     = [] of Int32
+DEBUG_STR_LIST = [] of String
 
 scoro Fiber1 do
   @i : Int32 = 0
@@ -180,6 +181,24 @@ describe "scoro" do
       fib.run
     end
     DEBUG_LIST.should eq [0, 1, 2, 10, 11, 12]
+  end
+
+  it "support uninitialized vars" do
+    fib = scoro(list: ["a", "b", "c"]) do
+      @list : Array(String)
+      2.times do |i|
+        @list.each do |item|
+          DEBUG_STR_LIST << "#{item}, #{@_i1}"
+          yield
+        end
+      end
+    end
+
+    DEBUG_STR_LIST.clear
+    while !fib.complete
+      fib.run
+    end
+    DEBUG_STR_LIST.should eq ["a, 0", "b, 0", "c, 0", "a, 1", "b, 1", "c, 1"]
   end
 end
 

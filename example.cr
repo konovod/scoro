@@ -1,11 +1,11 @@
 require "./src/scoro"
 
-LIST = ["a", "b", "c"]
 # This will create Serializable COROutine (SCORO)
 
-fib = scoro do
+fib = scoro(list: ["a", "b", "c"]) do
+  @list : Array(String)
   10.times do |i|
-    LIST.each do |item|
+    @list.each do |item|
       puts "#{item}, #{@_i1}"
       yield
     end

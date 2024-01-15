@@ -25,13 +25,13 @@ abstract class SerializableCoroutine
   abstract def run
 end
 
-macro scoro(&block)
+macro scoro(**args, &block)
   {%
     UNNAMED_IMPL_BLOCKS[0] += 1
     name = "ScoroTempClass#{UNNAMED_IMPL_BLOCKS[0]}".id
     IMPL_BLOCKS[name] = block
   %}
-  {{name}}.new
+  {{name}}.new({{**args}})
 end
 
 macro scoro(class_name, &block)
@@ -43,10 +43,16 @@ end
 macro implement_scoro
   {% for class_name, block in IMPL_BLOCKS %}
   class {{class_name}} < SerializableCoroutine
+    {% init_vars = [] of MacroId %}
     {% if block.body.is_a? Expressions %}
     {% for expr in block.body.expressions %}
       {% if expr.is_a? TypeDeclaration %}
-        {{expr.var}} = uninitialized {{expr.type}}
+        {% if expr.value.is_a? Nop %}
+        {{expr.var}} : {{expr.type}}
+         {% init_vars << expr.var %}
+        {% else %}
+        {{expr.var}} = uninitialized {{expr.type}} # assignment will happen ion a coroutine
+        {% end %}
 
         def {{expr.var.stringify.gsub(/@/, "").id}}=(value)
           {{expr.var}} = value
@@ -54,7 +60,11 @@ macro implement_scoro
         def {{expr.var.stringify.gsub(/@/, "").id}}
           {{expr.var}}
         end
-
+      
+      {% if init_vars.size > 0 %}  
+        def initialize({{init_vars.join(", ").id}})
+        end
+      {% end %}
 
       {% end %}
     {% end %}
@@ -64,7 +74,9 @@ macro implement_scoro
       {% if block.body.is_a? Expressions %}
       {% for expr in block.body.expressions %}
       {% if expr.is_a? TypeDeclaration %}
-        {{expr.var}} = {{expr.value}}
+        {% unless expr.value.is_a? Nop %}
+          {{expr.var}} = {{expr.value}}
+        {% end %}  
       {% else %}  
         {{expr}}
       {% end %}
@@ -194,7 +206,9 @@ macro implement_scoro
                    #  dump local vars assignments
                    local_vars.each { |tuple| gen_list << [:assign, tuple[0], tuple[1]] }
                  elsif expr.is_a? TypeDeclaration
-                   gen_list << [:assign, expr.var, expr.value]
+                   unless expr.value.is_a? Nop
+                     gen_list << [:assign, expr.var, expr.value]
+                   end
                  elsif expr.is_a? Return
                    gen_list << [:return, cur_state]
                  elsif expr.is_a? Break

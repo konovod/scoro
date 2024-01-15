@@ -101,7 +101,7 @@ more documentation is in progress
 ## Development
 
  - [x] BUG: update all variables for inner loops
- - [ ] FEATURE: pass arguments to anonymous scoros
+ - [x] FEATURE: pass arguments to anonymous scoros
  - [ ] OPTIMIZATION: merge loop start with loop control state
  - [ ] OPTIMIZATION: don't mark all ControlExpressions as dirty (separate pass?)
  - [ ] FEATURE: sleep
