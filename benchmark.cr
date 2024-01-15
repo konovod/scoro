@@ -1,18 +1,19 @@
 # Results in debug mode:
 #
-# d:\projects\crystal\scoro>crystal benchmark.cr
+# d:\projects\crystal\scoro>crystal run benchmark.cr
 # Warning: benchmarking without the `--release` flag won't yield useful results
-#                     direct code  12.49k ( 80.05µs) (± 2.07%)  0.0B/op        fastest
-#  native coroutine without yield  12.24k ( 81.67µs) (± 2.36%)  144B/op   1.02× slower
-#     native coroutine with yield 178.14  (  5.61ms) (± 2.35%)  188B/op  70.13× slower
-# serialized coroutine with yield 170.74  (  5.86ms) (± 1.96%)  255B/op  73.17× slower
+#                        direct code  13.65k ( 73.28µs) (± 0.72%)   0.0B/op        fastest
+#     native coroutine without yield  13.42k ( 74.50µs) (± 1.69%)   144B/op   1.02× slower
+# serialized coroutine without yield   4.06k (246.31µs) (± 0.71%)  32.0B/op   3.36× slower
+#        native coroutine with yield 194.40  (  5.14ms) (± 0.83%)   189B/op  70.20× slower
+#    serialized coroutine with yield 186.99  (  5.35ms) (± 0.76%)   259B/op  72.98× slower
 #
-# Results in release mode:
 # d:\projects\crystal\scoro>crystal run --release benchmark.cr
-#                     direct code  87.25k ( 11.46µs) (± 2.03%)  0.0B/op         fastest
-#  native coroutine without yield  84.61k ( 11.82µs) (± 1.72%)  144B/op    1.03× slower
-#     native coroutine with yield 742.03  (  1.35ms) (± 1.85%)  193B/op  117.58× slower
-# serialized coroutine with yield 711.89  (  1.40ms) (± 1.87%)  256B/op  122.55× slower
+#                        direct code  96.43k ( 10.37µs) (± 0.86%)   0.0B/op         fastest
+#     native coroutine without yield  93.84k ( 10.66µs) (± 0.58%)   144B/op    1.03× slower
+# serialized coroutine without yield  23.62k ( 42.34µs) (± 6.04%)  32.0B/op    4.08× slower
+#        native coroutine with yield 809.14  (  1.24ms) (± 0.52%)   191B/op  119.17× slower
+#    serialized coroutine with yield 762.11  (  1.31ms) (± 1.85%)   256B/op  126.53× slower
 
 require "benchmark"
 require "./src/scoro"

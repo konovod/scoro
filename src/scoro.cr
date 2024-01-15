@@ -12,7 +12,8 @@
 
 # Require setting local_vars: :yield, :while, :transition, :end_times, :if
 
-private IMPL_BLOCKS = {} of MacroId => ASTNode
+private IMPL_BLOCKS         = {} of MacroId => ASTNode
+private UNNAMED_IMPL_BLOCKS = [0]
 
 private SCORO_DEBUG = false
 
@@ -26,7 +27,8 @@ end
 
 macro scoro(&block)
   {%
-    name = "ScoroTempClass#{IMPL_BLOCKS.size}".id
+    UNNAMED_IMPL_BLOCKS[0] += 1
+    name = "ScoroTempClass#{UNNAMED_IMPL_BLOCKS[0]}".id
     IMPL_BLOCKS[name] = block
   %}
   {{name}}.new
@@ -117,6 +119,8 @@ macro implement_scoro
                      raise "Yielding in block is not supported for method #{last.name}, only #{supported_calls.keys} are supported"
                    end
                    parents_stack = parents_stack[0...-1]
+                 elsif expr.is_a? ExceptionHandler
+                   raise "ensure/except blocks are not supported"
                  else
                    # puts(expr.class_name)
                    # skip all other nodes
