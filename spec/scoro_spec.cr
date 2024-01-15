@@ -65,6 +65,16 @@ scoro FiberEach do
   end
 end
 
+scoro FiberWithList do
+  @list : Array(String)
+  2.times do |i|
+    @list.each do |item|
+      DEBUG_STR_LIST << "#{item}, #{@_i1}"
+      yield
+    end
+  end
+end
+
 describe "scoro" do
   it "process each" do
     fib = FiberEach.new
@@ -194,6 +204,15 @@ describe "scoro" do
       end
     end
 
+    DEBUG_STR_LIST.clear
+    while !fib.complete
+      fib.run
+    end
+    DEBUG_STR_LIST.should eq ["a, 0", "b, 0", "c, 0", "a, 1", "b, 1", "c, 1"]
+  end
+
+  it "support uninitialized vars in named fibers" do
+    fib = FiberWithList.new(list: ["a", "b", "c"])
     DEBUG_STR_LIST.clear
     while !fib.complete
       fib.run
