@@ -231,6 +231,7 @@ implement_scoro
 ## Development
 
  - [x] BUG: update all variables for inner loops
+ - [ ] BUG: case is still not implemented
  - [x] FEATURE: pass arguments to anonymous scoros
  - [ ] OPTIMIZATION: merge loop start with loop control state
  - [ ] OPTIMIZATION: don't mark all ControlExpressions as dirty (separate pass?)
