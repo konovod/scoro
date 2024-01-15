@@ -10,13 +10,11 @@
 # +Return [adds @complete= and return]
 # -ExceptionHandler [possible, but not planned]
 
-# Future optimizations:
-# - merge loop start with loop control state
-# - don't mark all ControlExpressions as dirty (separate pass?)
+# Require setting local_vars: :yield, :while, :transition, :end_times, :if
 
 private IMPL_BLOCKS = {} of MacroId => ASTNode
 
-private SCORO_DEBUG = true
+private SCORO_DEBUG = false
 
 abstract class SerializableCoroutine
   property state = 0
@@ -135,6 +133,7 @@ macro implement_scoro
              gen_list = [] of Tuple(Symbol | ASTNode, Int32)
              add_vars_count = 0
              cur_loop_stack = [] of Tuple(Int32, Int32?)
+             local_vars = [] of Tuple(StringLiteral, StringLiteral)
 
              forever.each do
                forever << nil
@@ -154,14 +153,24 @@ macro implement_scoro
                    if first.is_a? While
                      cur_loop_stack = cur_loop_stack[0...-1]
                      gen_list << [:transition, second, second + 2]
+                     #  dump local vars assignments
+                     local_vars.each { |tuple| gen_list << [:assign, tuple[0], tuple[1]] }
                    elsif first.is_a? Call
                      cur_loop_stack = cur_loop_stack[0...-1]
                      if first.name == "times"
                        gen_list << [:end_times, second, third]
+                       local_vars = local_vars[0...-1]
+                       #  dump local vars assignments
+                       local_vars.each { |tuple| gen_list << [:assign, tuple[0], tuple[1]] }
                      elsif first.name == "each"
                        gen_list << [:end_times, second, third]
+                       local_vars = local_vars[0...-1]
+                       #  dump local vars assignments
+                       local_vars.each { |tuple| gen_list << [:assign, tuple[0], tuple[1]] }
                      elsif first.name == "loop"
                        gen_list << [:transition, second, second + 2]
+                       #  dump local vars assignments
+                       local_vars.each { |tuple| gen_list << [:assign, tuple[0], tuple[1]] }
                      end
                    elsif first.is_a? If
                      if third == 0
@@ -169,6 +178,8 @@ macro implement_scoro
                      else
                        gen_list << [:transition, second + 2, second + 2]
                      end
+                     #  dump local vars assignments
+                     local_vars.each { |tuple| gen_list << [:assign, tuple[0], tuple[1]] }
                    else
                      raise "BUG: unsupported node: #{expr}"
                    end
@@ -176,6 +187,8 @@ macro implement_scoro
                    # found yield, mark all parents as dirty
                    cur_state += 1
                    gen_list << [:yield, cur_state]
+                   #  dump local vars assignments
+                   local_vars.each { |tuple| gen_list << [:assign, tuple[0], tuple[1]] }
                  elsif expr.is_a? TypeDeclaration
                    gen_list << [:assign, expr.var, expr.value]
                  elsif expr.is_a? Return
@@ -198,6 +211,8 @@ macro implement_scoro
                    gen_list << [:while, cur_state, expr.cond]
                    queue = [expr.body, {expr, cur_state}] + queue
                    cur_state += 2
+                   #  dump local vars assignments
+                   local_vars.each { |tuple| gen_list << [:assign, tuple[0], tuple[1]] }
                  elsif expr.is_a? Call
                    cur_state += 1
                    if expr.name == "times"
@@ -205,18 +220,24 @@ macro implement_scoro
                      cur_loop_stack << {cur_state, add_vars_count}
                      gen_list << [:assign, "@_i#{add_vars_count}".id, 0]
                      gen_list << [:while, cur_state, "@_i#{add_vars_count} < #{expr.receiver}".id]
-                     gen_list << [:assign, expr.block.args[0], "@_i#{add_vars_count}".id] unless expr.block.args.empty?
+                     local_vars << [expr.block.args[0], "@_i#{add_vars_count}".id] unless expr.block.args.empty?
+                     #  dump local vars assignments
+                     local_vars.each { |tuple| gen_list << [:assign, tuple[0], tuple[1]] }
                      queue = [expr.block.body, {expr, cur_state, add_vars_count}] + queue
                    elsif expr.name == "loop"
                      cur_loop_stack << {cur_state, nil}
                      gen_list << [:while, cur_state, true]
+                     #  dump local vars assignments
+                     local_vars.each { |tuple| gen_list << [:assign, tuple[0], tuple[1]] }
                      queue = [expr.block.body, {expr, cur_state}] + queue
                    elsif expr.name == "each"
                      add_vars_count += 1
                      cur_loop_stack << {cur_state, add_vars_count}
                      gen_list << [:assign, "@_i#{add_vars_count}".id, 0]
                      gen_list << [:while, cur_state, "@_i#{add_vars_count} < #{expr.receiver}.size".id]
-                     gen_list << [:assign, expr.block.args[0], "#{expr.receiver}[@_i#{add_vars_count}]".id]
+                     local_vars << [expr.block.args[0], "#{expr.receiver}[@_i#{add_vars_count}]".id]
+                     #  dump local vars assignments
+                     local_vars.each { |tuple| gen_list << [:assign, tuple[0], tuple[1]] }
                      queue = [expr.block.body, {expr, cur_state, add_vars_count}] + queue
                    end
                    cur_state += 2
@@ -225,6 +246,8 @@ macro implement_scoro
                    gen_list << [:if, cur_state, expr.cond]
                    queue = [expr.then, {expr, cur_state, 0}, expr.else, {expr, cur_state, 1}] + queue
                    cur_state += 2
+                   #  dump local vars assignments
+                   local_vars.each { |tuple| gen_list << [:assign, tuple[0], tuple[1]] }
                  elsif expr.is_a? Case
                    #  parents_stack << expr
                    #  queue = [expr.whens.map(&.body), expr.else, 1] + queue

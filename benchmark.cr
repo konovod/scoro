@@ -36,6 +36,16 @@ Benchmark.ips do |bench|
     done.receive
   end
 
+  bench.report("serialized coroutine without yield") do
+    sc = scoro do
+      @sum : Int32 = 0
+      N.times { |i| @sum += i % 19; yield }
+    end
+    while !sc.complete
+      sc.run
+    end
+  end
+
   bench.report("native coroutine with yield") do
     spawn do
       sum = 0

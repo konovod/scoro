@@ -149,6 +149,38 @@ describe "scoro" do
     end
     DEBUG_LIST.should eq [1, 1, 1, 1, 1]
   end
+
+  it "support inner loops with times" do
+    fib = scoro do
+      2.times do |i|
+        3.times do |j|
+          DEBUG_LIST << i*10 + j
+          yield
+        end
+      end
+    end
+    DEBUG_LIST.clear
+    while !fib.complete
+      fib.run
+    end
+    DEBUG_LIST.should eq [0, 1, 2, 10, 11, 12]
+  end
+
+  it "support inner loops with each" do
+    fib = scoro do
+      [0, 10].each do |i|
+        [0, 1, 2].each do |j|
+          DEBUG_LIST << i + j
+          yield
+        end
+      end
+    end
+    DEBUG_LIST.clear
+    while !fib.complete
+      fib.run
+    end
+    DEBUG_LIST.should eq [0, 1, 2, 10, 11, 12]
+  end
 end
 
 implement_scoro
