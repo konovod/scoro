@@ -6,7 +6,7 @@
 
 Serializable COROutines in a Crystal (white-box state machine approach)
 
-Works by recursively unrolling AST tree to one state machine
+Works by recursively unrolling AST to one state machine
 
 This would be impossible without 
 
@@ -77,7 +77,7 @@ scoro(Fiber1) do
   end
 end
 
-# it can be instanciated and then used:
+# it can be instantiated and then used:
 fib = Fiber1.new
 while !fib.complete
   fib.run
@@ -89,7 +89,7 @@ implement_scoro # must be placed at end of file to actually implement all scoro 
 
 local vars won't be saved in a scoro. So they can be only inside one state (between `yield`s).
 
-```
+```crystal
 scoro(Fiber1) do
   loop do
     a = 1 # var usage is limited to one state
@@ -105,7 +105,7 @@ end
 
 To solve it, use serialized vars (instance vars of scoro class). They can be defined as following:
 
-```
+```crystal
 scoro(Fiber1) do
   loop do
     @a : Int32 = 1 # instance var, can be used in any states
@@ -124,7 +124,7 @@ end
 Note first example used constant `LIST` instead of local var `list` because scoros do not capture local vars.
 To pass arguments to scoro you can use serialized vars without initial value:
 
-```
+```crystal
   fib = scoro(list: ["a", "b", "c"]) do
     @list : Array(String) # declares serialized var without initial value. Note list is passed as named argument when creating fiber
     2.times do |i|
@@ -138,7 +138,7 @@ To pass arguments to scoro you can use serialized vars without initial value:
   fib.run  
 ```
 or for the named scoros:
-```
+```crystal
 scoro FiberWithList do
   @list : Array(String)
   @list.each do |item|
@@ -154,7 +154,7 @@ fib = FiberWithList.new(list: ["a","b","c"])
 ### Blocks
 
 In general, yields inside blocks can't be serialized:
-```
+```crystal
 scoro MyFiber do
   thrice do |item| # what is contained inside function `thrice` is unknown to a scoro library, so it's state can't be serialized
     puts item
@@ -164,17 +164,21 @@ end
 ```
 
 All above examples used blocks though and compile. Why? Because calls of `times`, `each`, `loop` are hardcoded in a library.
+
 `loop`: simplest, equivalent to `while true...`, no serialized state
+
 `n.times`: equivalent to `i=0; while i<n...`, has internal state of one Int32 var
-`list.each do |item|`: rewritten `i=0; while i<n; item=list[i]...`, has internal state of one Int32 var
+
+`list.each do |item|`: rewritten to `i=0; while i<n; item=list[i]...`, has internal state of one Int32 var (index)
 
 ### Actual serialization
-ok, all of this is nice, but how to actually Serialize coroutne state! 
+ok, all of this is nice, but how to actually serialize coroutine state! 
 All generated scoro classes are inherited from `SerializableCoroutine`
 You can `include JSON::Serializable` or `include YAML::Serializable` or add other serialization method of your choice to it.
+
 If you use named scoro, you can also reopen its class to add needed methods.
 
-```
+```crystal
 require "scoro"
 require "json"
 
@@ -203,10 +207,12 @@ implement_scoro
 
 
 ## Limitations
+Note that most limitations only apply to code that contain `yield`. AST nodes without `yield` are mostly copy-pasted to a generated state-machine, so everything should work there.
+
  - currently, type of serialized vars must be always specified explicitly
  - currently, serialized vars can be declared only on top level.
   This example won't compile:
- ```
+ ```crystal
    while some_action_required
     @i : Int32 = 5
     while @i > 0 
@@ -217,7 +223,7 @@ implement_scoro
    end
  ```
  Fix it so:
- ```
+ ```crystal
    @i : Int32 = 0
    while some_action_required
     @i = 5
