@@ -10,7 +10,7 @@
 # +Return [adds @complete= and return]
 # -ExceptionHandler [possible, but not planned]
 
-# Require setting local_vars: :yield, :while, :transition, :end_times, :if
+# Require setting local_vars: :yield, :while, :transition, :end_times, :if, :case, :case_exhaustive
 
 private IMPL_BLOCKS         = {} of MacroId => ASTNode
 private UNNAMED_IMPL_BLOCKS = [0]
