@@ -4,7 +4,7 @@ Serializable COROutines in a Crystal (white-box state machine approach)
 
 Works by recursively unrolling AST tree to one state machine
 
-It will be impossible without 
+This would be impossible without 
 
   - Idea: https://gamedev.ru/flame/forum/?id=238878&page=35&m=5849512#m510
 
