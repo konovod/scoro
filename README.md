@@ -189,7 +189,7 @@ fib = scoro(list: ["a", "b", "c"]) do
 end
 
 fib.run
-puts fib.to_json
+puts fib.to_json # prints {"state":7,"complete":false,"list":["a","b","c"],"_i1":0,"_i2":0}
 
 fib2 = typeof(fib).from_json(fib.to_json)
 fib2.run
@@ -242,6 +242,7 @@ implement_scoro
  - [ ] FEATURE: channel.send\receive?
  - [ ] FEATURE: each_with_index
  - [ ] FEATURE: if, case with assignment
+ - [ ] FEATURE: named yields, to make serialization more readable (and changeproof)
 
 
 
