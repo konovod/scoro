@@ -1,3 +1,6 @@
+<a href="https://github.com/konovod/scoro/actions/workflows/ci.yml">
+      <img src="https://github.com/konovod/scoro/actions/workflows/ci.yml/badge.svg" alt="Build Status">
+</a>
 # scoro
 
 Serializable COROutines in a Crystal (white-box state machine approach)

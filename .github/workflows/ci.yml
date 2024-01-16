@@ -1,0 +1,26 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+    branches: [master]
+jobs:
+  build:
+    name: Test
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-latest, crystal: latest }
+          - { os: ubuntu-latest, crystal: nightly }
+          - { os: macos-latest }
+          - { os: windows-latest }
+    runs-on: ${{matrix.os}}
+    steps:
+      - uses: crystal-lang/install-crystal@v1
+        with:
+          crystal: ${{matrix.crystal}}
+      - uses: actions/checkout@v2
+      - run: crystal spec
+      - run: crystal run example.cr
+      - run: crystal run example_json.cr
