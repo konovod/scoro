@@ -67,7 +67,7 @@ LIST = ["a", "b", "c"]
 scoro(Fiber1) do
   10.times do |i|
     LIST.each do |item|
-      puts "#{item}, #{@_i1}"
+      puts "#{item}, #{i}"
       yield
     end
   end

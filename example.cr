@@ -5,7 +5,7 @@ fib = scoro do
   @list : Array(String) = ["a", "b", "c"]
   10.times do |i|
     @list.each do |item|
-      puts "#{item}, #{@_i1}"
+      puts "#{item}, #{i}"
       yield
     end
   end

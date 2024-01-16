@@ -15,7 +15,7 @@
 private IMPL_BLOCKS         = {} of MacroId => ASTNode
 private UNNAMED_IMPL_BLOCKS = [0]
 
-private SCORO_DEBUG = false
+private SCORO_DEBUG = false # set true to see generated code
 
 abstract class SerializableCoroutine
   property state = 0
