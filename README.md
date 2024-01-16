@@ -238,6 +238,7 @@ implement_scoro
  - [x] FEATURE: pass arguments to anonymous scoros
  - [ ] OPTIMIZATION: merge loop start with loop control state
  - [ ] OPTIMIZATION: don't mark all ControlExpressions as dirty (separate pass?)
+ - [ ] OPTIMIZATION: tail call of next state
  - [ ] FEATURE: sleep
  - [ ] FEATURE: channel.send\receive?
  - [ ] FEATURE: each_with_index
