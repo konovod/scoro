@@ -1,5 +1,5 @@
 # supported constructs:
-# -Case
+# +Case
 # +If [branch1, branch2 inc at branch start]
 # +While [(start, end), inc at start and end]
 # +Yield [(after), inc at after]
@@ -15,7 +15,7 @@
 private IMPL_BLOCKS         = {} of MacroId => ASTNode
 private UNNAMED_IMPL_BLOCKS = [0]
 
-private SCORO_DEBUG = false # set true to see generated code
+private SCORO_DEBUG = false # set to true to see generated code
 
 abstract class SerializableCoroutine
   property state = 0
@@ -277,6 +277,8 @@ macro implement_scoro
                    else
                      gen_list << [:case, cur_state, expr.cond, expr.whens.map(&.conds), !expr.else.is_a?(Nop)]
                    end
+                   #  dump local vars assignments
+                   local_vars.each { |tuple| gen_list << [:assign, tuple[0], tuple[1]] }
                    n = expr.whens.size
                    n += 1 unless expr.else.is_a? Nop
                    list = [] of ASTNode
@@ -284,7 +286,7 @@ macro implement_scoro
                      list << awhen.body << {expr, cur_state + i + 1, cur_state + n}
                    end
                    unless expr.else.is_a? Nop
-                     list << expr.else.body << {expr, cur_state + n, cur_state + n}
+                     list << expr.else << {expr, cur_state + n, cur_state + n}
                    end
                    queue = list + queue
                    cur_state += n
@@ -351,6 +353,16 @@ macro implement_scoro
             in {{conds.join(", ").id}} 
               @state = {{expr[1] + i}}
             {% end %}
+            end  
+        when {{expr[1]}}
+    {% elsif expr[0] == :case %}
+            case {{expr[2]}}
+            {% for conds, i in expr[3] %}
+            when {{conds.join(", ").id}} 
+              @state = {{expr[1] + i}}
+            {% end %}
+            else
+              @state = {{expr[1] + expr[3].size}}
             end  
         when {{expr[1]}}
     {% else %}

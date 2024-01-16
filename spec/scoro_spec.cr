@@ -239,6 +239,40 @@ describe "scoro" do
     end
     DEBUG_STR_LIST.should eq ["123 number"]
   end
+
+  it "support non-exhaustive case" do
+    fib = scoro(sel: 4) do
+      @sel : Int32
+      case @sel
+      when 1
+        DEBUG_STR_LIST << "option 1"
+        yield
+      when 2
+        DEBUG_STR_LIST << "option 2"
+        yield
+      when 3
+        DEBUG_STR_LIST << "option 3"
+        yield
+      else
+        DEBUG_STR_LIST << "not 1,2,3"
+        yield
+      end
+
+      case @sel % 2
+      when 0
+        DEBUG_STR_LIST << "even"
+        yield
+      when 1
+        DEBUG_STR_LIST << "odd"
+        yield
+      end
+    end
+    DEBUG_STR_LIST.clear
+    while !fib.complete
+      fib.run
+    end
+    DEBUG_STR_LIST.should eq ["not 1,2,3", "even"]
+  end
 end
 
 implement_scoro
