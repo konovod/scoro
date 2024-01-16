@@ -219,6 +219,26 @@ describe "scoro" do
     end
     DEBUG_STR_LIST.should eq ["a, 0", "b, 0", "c, 0", "a, 1", "b, 1", "c, 1"]
   end
+
+  it "support exhaustive case" do
+    fib = scoro(sel: true) do
+      @sel : Bool
+      @i : Int32 | String = @sel ? 123 : "abc"
+      case @i
+      in String
+        DEBUG_STR_LIST << "#{@i} string"
+        yield
+      in Int32
+        yield
+        DEBUG_STR_LIST << "#{@i} number"
+      end
+    end
+    DEBUG_STR_LIST.clear
+    while !fib.complete
+      fib.run
+    end
+    DEBUG_STR_LIST.should eq ["123 number"]
+  end
 end
 
 implement_scoro

@@ -51,7 +51,7 @@ macro implement_scoro
         {{expr.var}} : {{expr.type}}
          {% init_vars << expr.var %}
         {% else %}
-        {{expr.var}} = uninitialized {{expr.type}} # assignment will happen ion a coroutine
+        {{expr.var}} = uninitialized {{expr.type}} # assignment will happen in a coroutine
         {% end %}
 
         def {{expr.var.stringify.gsub(/@/, "").id}}=(value)
@@ -115,7 +115,7 @@ macro implement_scoro
                    queue = [expr.then, expr.else, 1] + queue
                  elsif expr.is_a? Case
                    parents_stack << expr
-                   queue = [expr.whens.map(&.body), expr.else, 1] + queue
+                   queue = expr.whens.map(&.body) + [expr.else, 1] + queue
                  elsif expr.is_a?(Yield) || expr.is_a?(ControlExpression)
                    # found yield, mark all parents as dirty
                    parents_stack.each do |marked|
@@ -140,7 +140,7 @@ macro implement_scoro
                end
              end
 
-             # puts dirty.keys.map(&.first.class_name)
+             #  puts dirty.keys.map(&.first.class_name)
 
              forever = [nil] of NilLiteral
              queue = [block.body]
@@ -194,6 +194,10 @@ macro implement_scoro
                      else
                        gen_list << [:transition, second + 2, second + 2]
                      end
+                     #  dump local vars assignments
+                     local_vars.each { |tuple| gen_list << [:assign, tuple[0], tuple[1]] }
+                   elsif first.is_a? Case
+                     gen_list << [:transition, third, second]
                      #  dump local vars assignments
                      local_vars.each { |tuple| gen_list << [:assign, tuple[0], tuple[1]] }
                    else
@@ -267,9 +271,23 @@ macro implement_scoro
                    #  dump local vars assignments
                    local_vars.each { |tuple| gen_list << [:assign, tuple[0], tuple[1]] }
                  elsif expr.is_a? Case
-                   #  parents_stack << expr
-                   #  queue = [expr.whens.map(&.body), expr.else, 1] + queue
-                   # TODO
+                   cur_state += 1
+                   if expr.exhaustive?
+                     gen_list << [:case_exhaustive, cur_state, expr.cond, expr.whens.map(&.conds)]
+                   else
+                     gen_list << [:case, cur_state, expr.cond, expr.whens.map(&.conds), !expr.else.is_a?(Nop)]
+                   end
+                   n = expr.whens.size
+                   n += 1 unless expr.else.is_a? Nop
+                   list = [] of ASTNode
+                   expr.whens.each_with_index do |awhen, i|
+                     list << awhen.body << {expr, cur_state + i + 1, cur_state + n}
+                   end
+                   unless expr.else.is_a? Nop
+                     list << expr.else.body << {expr, cur_state + n, cur_state + n}
+                   end
+                   queue = list + queue
+                   cur_state += n
                  else
                    raise "BUG: unsupported node: #{expr}"
                  end
@@ -327,6 +345,14 @@ macro implement_scoro
           @_i{{expr[2]}} += 1
           @state = {{expr[1]}}
           next
+    {% elsif expr[0] == :case_exhaustive %}
+            case {{expr[2]}}
+            {% for conds, i in expr[3] %}
+            in {{conds.join(", ").id}} 
+              @state = {{expr[1] + i}}
+            {% end %}
+            end  
+        when {{expr[1]}}
     {% else %}
           {{expr[0]}}
     {% end %}
